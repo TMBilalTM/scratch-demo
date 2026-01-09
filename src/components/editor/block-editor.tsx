@@ -336,6 +336,89 @@ export const BlockEditor = forwardRef<BlockEditorHandle>((props, ref) => {
       },
     };
 
+    // SENSING BLOCKS
+    Blockly.Blocks["mouse_x"] = {
+      init: function () {
+        this.appendDummyInput().appendField("mouse x");
+        this.setOutput(true, "Number");
+        this.setColour(180);
+        this.setTooltip("Current mouse X position");
+      },
+    };
+
+    Blockly.Blocks["mouse_y"] = {
+      init: function () {
+        this.appendDummyInput().appendField("mouse y");
+        this.setOutput(true, "Number");
+        this.setColour(180);
+        this.setTooltip("Current mouse Y position");
+      },
+    };
+
+    Blockly.Blocks["key_pressed"] = {
+      init: function () {
+        this.appendDummyInput()
+          .appendField("key")
+          .appendField(
+            new Blockly.FieldDropdown([
+              ["space", " "],
+              ["up arrow", "ArrowUp"],
+              ["down arrow", "ArrowDown"],
+              ["left arrow", "ArrowLeft"],
+              ["right arrow", "ArrowRight"],
+              ["a", "a"],
+              ["b", "b"],
+              ["c", "c"],
+              ["d", "d"],
+              ["w", "w"],
+              ["s", "s"],
+            ]),
+            "KEY"
+          )
+          .appendField("pressed?");
+        this.setOutput(true, "Boolean");
+        this.setColour(180);
+        this.setTooltip("Check if key is pressed");
+      },
+    };
+
+    Blockly.Blocks["touching_mouse"] = {
+      init: function () {
+        this.appendDummyInput().appendField("touching mouse-pointer?");
+        this.setOutput(true, "Boolean");
+        this.setColour(180);
+        this.setTooltip("Check if touching mouse");
+      },
+    };
+
+    Blockly.Blocks["distance_to_mouse"] = {
+      init: function () {
+        this.appendDummyInput().appendField("distance to mouse");
+        this.setOutput(true, "Number");
+        this.setColour(180);
+        this.setTooltip("Distance to mouse pointer");
+      },
+    };
+
+    Blockly.Blocks["timer_value"] = {
+      init: function () {
+        this.appendDummyInput().appendField("timer");
+        this.setOutput(true, "Number");
+        this.setColour(180);
+        this.setTooltip("Seconds since timer reset");
+      },
+    };
+
+    Blockly.Blocks["reset_timer"] = {
+      init: function () {
+        this.appendDummyInput().appendField("reset timer");
+        this.setPreviousStatement(true, null);
+        this.setNextStatement(true, null);
+        this.setColour(180);
+        this.setTooltip("Reset timer to 0");
+      },
+    };
+
     // Initialize workspace
     workspace.current = Blockly.inject(blocklyDiv.current, {
       toolbox: {
@@ -461,6 +544,41 @@ export const BlockEditor = forwardRef<BlockEditorHandle>((props, ref) => {
               {
                 kind: "block",
                 type: "random_number",
+              },
+            ],
+          },
+          {
+            kind: "category",
+            name: "Sensing",
+            colour: "180",
+            contents: [
+              {
+                kind: "block",
+                type: "mouse_x",
+              },
+              {
+                kind: "block",
+                type: "mouse_y",
+              },
+              {
+                kind: "block",
+                type: "key_pressed",
+              },
+              {
+                kind: "block",
+                type: "touching_mouse",
+              },
+              {
+                kind: "block",
+                type: "distance_to_mouse",
+              },
+              {
+                kind: "block",
+                type: "timer_value",
+              },
+              {
+                kind: "block",
+                type: "reset_timer",
               },
             ],
           },
