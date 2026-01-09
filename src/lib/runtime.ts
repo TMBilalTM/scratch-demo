@@ -534,9 +534,6 @@ export async function executeCode(
       getVar,
       changeVar
     );
-      setSize,
-      pointTowards
-    );
   } catch (error) {
     console.error("Execution error:", error);
     throw error;
