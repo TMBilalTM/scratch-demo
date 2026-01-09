@@ -30,6 +30,9 @@ interface EditorStore {
   timer: number;
   timerStartTime: number;
   
+  // Variables
+  variables: Map<string, number | string>;
+  
   addSprite: (sprite: Sprite) => void;
   updateSprite: (id: string, updates: Partial<Sprite>) => void;
   deleteSprite: (id: string) => void;
@@ -49,6 +52,12 @@ interface EditorStore {
   setKeyPressed: (key: string, pressed: boolean) => void;
   resetTimer: () => void;
   getTimer: () => number;
+  
+  // Variable actions
+  setVariable: (name: string, value: number | string) => void;
+  getVariable: (name: string) => number | string | undefined;
+  changeVariable: (name: string, delta: number) => void;
+  deleteVariable: (name: string) => void;
 }
 
 const defaultSprite: Sprite = {
@@ -78,6 +87,9 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   pressedKeys: new Set<string>(),
   timer: 0,
   timerStartTime: Date.now(),
+  
+  // Variables
+  variables: new Map<string, number | string>(),
   
   addSprite: (sprite) =>
     set((state) => {
@@ -174,4 +186,34 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     const state = get();
     return (Date.now() - state.timerStartTime) / 1000;
   },
+  
+  // Variable actions
+  setVariable: (name, value) =>
+    set((state) => {
+      const newVars = new Map(state.variables);
+      newVars.set(name, value);
+      return { variables: newVars };
+    }),
+  
+  getVariable: (name) => {
+    const state = get();
+    return state.variables.get(name);
+  },
+  
+  changeVariable: (name, delta) =>
+    set((state) => {
+      const newVars = new Map(state.variables);
+      const current = newVars.get(name);
+      if (typeof current === 'number') {
+        newVars.set(name, current + delta);
+      }
+      return { variables: newVars };
+    }),
+  
+  deleteVariable: (name) =>
+    set((state) => {
+      const newVars = new Map(state.variables);
+      newVars.delete(name);
+      return { variables: newVars };
+    }),
 }));

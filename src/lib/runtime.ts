@@ -187,6 +187,11 @@ export interface SpriteCommands {
   distanceTo: (x: number, y: number) => number;
   timer: () => number;
   resetTimer: () => void;
+  
+  // Variables
+  setVar: (name: string, value: number | string) => void;
+  getVar: (name: string) => number | string;
+  changeVar: (name: string, delta: number) => void;
 }
 
 interface SpriteState {
@@ -410,6 +415,24 @@ export function createRuntime(
     resetTimer: () => {
       if (getStoreState) {
         getStoreState().resetTimer();
+      }
+    },
+    
+    // Variables
+    setVar: (name, value) => {
+      if (getStoreState) {
+        getStoreState().setVariable(name, value);
+      }
+    },
+    
+    getVar: (name) => {
+      if (!getStoreState) return 0;
+      return getStoreState().getVariable(name) ?? 0;
+    },
+    
+    changeVar: (name, delta) => {
+      if (getStoreState) {
+        getStoreState().changeVariable(name, delta);
       }
     },
   };
