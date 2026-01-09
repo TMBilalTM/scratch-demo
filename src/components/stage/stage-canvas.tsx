@@ -40,6 +40,13 @@ export function StageCanvas() {
       setBackdropImage(img);
       URL.revokeObjectURL(url);
     };
+    
+    img.onerror = () => {
+      console.error('Failed to load backdrop image');
+      setBackdropImage(null);
+      URL.revokeObjectURL(url);
+    };
+    
     img.src = url;
 
     return () => URL.revokeObjectURL(url);
@@ -60,6 +67,12 @@ export function StageCanvas() {
           setSpriteImages(new Map(newImages));
           URL.revokeObjectURL(url);
         };
+        
+        img.onerror = () => {
+          console.error(`Failed to load sprite image: ${sprite.id}`);
+          URL.revokeObjectURL(url);
+        };
+        
         img.src = url;
       }
     });

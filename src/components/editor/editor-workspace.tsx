@@ -72,6 +72,21 @@ export default function EditorWorkspace({ initialProjectId }: EditorWorkspacePro
   } = useEditorStore();
   const { toast } = useToast();
 
+  // Sync blocks to code when switching to code mode
+  const handleModeChange = (newMode: EditorMode) => {
+    setMode(newMode);
+    
+    if (newMode === "code" && mode === "blocks") {
+      // Use setTimeout to ensure code editor is mounted
+      setTimeout(() => {
+        const blockCode = blockEditorRef.current?.getCode() || "";
+        if (blockCode && codeEditorRef.current) {
+          codeEditorRef.current.setCode(blockCode);
+        }
+      }, 50);
+    }
+  };
+
   // Auto-load project on mount
   useEffect(() => {
     // If initialProjectId provided (from URL), load that project
@@ -487,7 +502,7 @@ export default function EditorWorkspace({ initialProjectId }: EditorWorkspacePro
         {/* Left: Code/Blocks Editor */}
         <div className="flex w-[45%] flex-col border-r bg-background/50 backdrop-blur-sm">
           <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-2">
-            <Tabs value={mode} onValueChange={(v) => setMode(v as EditorMode)}>
+            <Tabs value={mode} onValueChange={(v) => handleModeChange(v as EditorMode)}>
               <TabsList className="bg-background/80">
                 <TabsTrigger value="blocks" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                   🧩 Blocks

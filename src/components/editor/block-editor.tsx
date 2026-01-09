@@ -3,6 +3,7 @@
 import { useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import * as Blockly from "blockly";
 import { javascriptGenerator } from "blockly/javascript";
+import { generateCode } from "@/lib/runtime";
 import { useEditorStore } from "@/lib/store";
 import {
   Select,
@@ -28,7 +29,7 @@ export const BlockEditor = forwardRef<BlockEditorHandle>((props, ref) => {
   useImperativeHandle(ref, () => ({
     getCode: () => {
       if (!workspace.current) return "";
-      return javascriptGenerator.workspaceToCode(workspace.current);
+      return generateCode(workspace.current);
     },
     getWorkspace: () => workspace.current,
     getWorkspaceXml: () => {

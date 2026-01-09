@@ -35,10 +35,10 @@ export function SpriteList() {
       <ScrollArea className="flex-1">
         <div className="flex gap-2 pb-1">
           {sprites.map((sprite) => (
-            <button
+            <div
               key={sprite.id}
               onClick={() => selectSprite(sprite.id)}
-              className={`group relative flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-lg border-2 transition-all hover:scale-105 ${
+              className={`group relative flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-lg border-2 transition-all hover:scale-105 cursor-pointer ${
                 selectedSpriteId === sprite.id
                   ? "border-primary bg-primary/10 shadow-md"
                   : "border-border bg-background hover:border-primary/50"
@@ -63,7 +63,7 @@ export function SpriteList() {
                   <Trash2 className="h-3 w-3" />
                 </button>
               )}
-            </button>
+            </div>
           ))}
         </div>
       </ScrollArea>
