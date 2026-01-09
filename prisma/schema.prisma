@@ -1,0 +1,118 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  email     String?  @unique
+  password  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  projects  Project[]
+  accounts  Account[]
+  sessions  Session[]
+  
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  thumbnail   String?
+  blocks      String   @default("[]") // JSON string
+  code        String   @default("")
+  mode        String   @default("blocks") // "blocks" | "code"
+  isPublic    Boolean  @default(false)
+  views       Int      @default(0)
+  likes       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  sprites     Sprite[]
+  
+  @@index([userId])
+  @@index([isPublic, createdAt])
+  @@map("projects")
+}
+
+model Sprite {
+  id        String   @id @default(cuid())
+  name      String
+  x         Float    @default(0)
+  y         Float    @default(0)
+  rotation  Float    @default(0)
+  size      Float    @default(100)
+  visible   Boolean  @default(true)
+  costume   String   // asset ID or data URL
+  scripts   String   @default("[]") // JSON string
+  
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  @@index([projectId])
+  @@map("sprites")
+}
+
+model Asset {
+  id        String   @id @default(cuid())
+  name      String
+  type      String   // "sprite" | "sound" | "backdrop"
+  data      String   // base64 or URL
+  thumbnail String?
+  tags      String   @default("[]") // JSON array
+  isPublic  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  
+  @@index([type, isPublic])
+  @@map("assets")
+}
