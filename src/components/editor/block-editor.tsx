@@ -14,6 +14,10 @@ import {
 } from "@/components/ui/select";
 import { Users } from "lucide-react";
 
+interface BlockEditorProps {
+  initialXml?: string;
+}
+
 export interface BlockEditorHandle {
   getCode: () => string;
   getWorkspace: () => Blockly.WorkspaceSvg | null;
@@ -21,7 +25,7 @@ export interface BlockEditorHandle {
   loadWorkspaceXml: (xml: string) => void;
 }
 
-export const BlockEditor = forwardRef<BlockEditorHandle>((props, ref) => {
+export const BlockEditor = forwardRef<BlockEditorHandle, BlockEditorProps>(({ initialXml }, ref) => {
   const blocklyDiv = useRef<HTMLDivElement>(null);
   const workspace = useRef<Blockly.WorkspaceSvg | null>(null);
   const { sprites, selectedSpriteId, selectSprite } = useEditorStore();
@@ -38,9 +42,10 @@ export const BlockEditor = forwardRef<BlockEditorHandle>((props, ref) => {
       return Blockly.Xml.domToText(xml);
     },
     loadWorkspaceXml: (xml: string) => {
-      if (!workspace.current || !xml) return;
+      if (!workspace.current) return;
       try {
         workspace.current.clear();
+        if (!xml) return;
         const dom = Blockly.utils.xml.textToDom(xml);
         Blockly.Xml.domToWorkspace(dom, workspace.current);
       } catch (error) {
@@ -650,6 +655,15 @@ export const BlockEditor = forwardRef<BlockEditorHandle>((props, ref) => {
         wheel: true,
       },
     });
+
+    if (initialXml) {
+      try {
+        const dom = Blockly.utils.xml.textToDom(initialXml);
+        Blockly.Xml.domToWorkspace(dom, workspace.current);
+      } catch (error) {
+        console.error("Failed to load initial blocks:", error);
+      }
+    }
 
     // Cleanup
     return () => {

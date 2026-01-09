@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, forwardRef, useImperativeHandle } from "react";
+import { useEffect, useState, forwardRef, useImperativeHandle } from "react";
 import { useEditorStore } from "@/lib/store";
 import {
   Select,
@@ -11,14 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Users } from "lucide-react";
 
-export interface CodeEditorHandle {
-  getCode: () => string;
-  setCode: (code: string) => void;
-}
-
-export const CodeEditor = forwardRef<CodeEditorHandle>((props, ref) => {
-  const { sprites, selectedSpriteId, selectSprite } = useEditorStore();
-  const [code, setCode] = useState(`// Welcome to CodeCraft!
+const DEFAULT_CODE = `// Welcome to CodeCraft!
 // Write your JavaScript code here
 
 async function main() {
@@ -39,7 +32,26 @@ async function main() {
 }
 
 main();
-`);
+`;
+
+interface CodeEditorProps {
+  initialCode?: string;
+}
+
+export interface CodeEditorHandle {
+  getCode: () => string;
+  setCode: (code: string) => void;
+}
+
+export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(({ initialCode }, ref) => {
+  const { sprites, selectedSpriteId, selectSprite } = useEditorStore();
+  const [code, setCode] = useState(() => (initialCode ?? DEFAULT_CODE));
+
+  useEffect(() => {
+    if (typeof initialCode === "string") {
+      setCode(initialCode);
+    }
+  }, [initialCode]);
 
   useImperativeHandle(ref, () => ({
     getCode: () => code,

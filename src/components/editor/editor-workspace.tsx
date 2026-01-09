@@ -43,6 +43,8 @@ interface EditorWorkspaceProps {
 export default function EditorWorkspace({ initialProjectId }: EditorWorkspaceProps = {}) {
   const { data: session } = useSession();
   const [mode, setMode] = useState<EditorMode>("blocks");
+  const [draftBlocksXml, setDraftBlocksXml] = useState<string>("");
+  const [draftCode, setDraftCode] = useState<string>("");
   const [projectTitle, setProjectTitle] = useState("Untitled Project");
   const [projectDescription, setProjectDescription] = useState("");
   const [projectId, setProjectId] = useState(() => `project-${Date.now()}`);
@@ -72,19 +74,29 @@ export default function EditorWorkspace({ initialProjectId }: EditorWorkspacePro
   } = useEditorStore();
   const { toast } = useToast();
 
-  // Sync blocks to code when switching to code mode
   const handleModeChange = (newMode: EditorMode) => {
-    setMode(newMode);
-    
-    if (newMode === "code" && mode === "blocks") {
-      // Use setTimeout to ensure code editor is mounted
-      setTimeout(() => {
-        const blockCode = blockEditorRef.current?.getCode() || "";
-        if (blockCode && codeEditorRef.current) {
-          codeEditorRef.current.setCode(blockCode);
-        }
-      }, 50);
+    if (newMode === mode) return;
+
+    if (mode === "blocks") {
+      const blocksXml = blockEditorRef.current?.getWorkspaceXml() ?? draftBlocksXml;
+      const generatedCode = blockEditorRef.current?.getCode() ?? draftCode;
+      setDraftBlocksXml(blocksXml);
+      setDraftCode(generatedCode);
+      setMode(newMode);
+
+      if (newMode === "code") {
+        // Best-effort: ensure mounted editor receives the generated code.
+        setTimeout(() => {
+          codeEditorRef.current?.setCode(generatedCode);
+        }, 0);
+      }
+      return;
     }
+
+    // Leaving code mode
+    const currentCode = codeEditorRef.current?.getCode() ?? draftCode;
+    setDraftCode(currentCode);
+    setMode(newMode);
   };
 
   // Auto-load project on mount
@@ -113,10 +125,10 @@ export default function EditorWorkspace({ initialProjectId }: EditorWorkspacePro
       let code = "";
       if (mode === "blocks") {
         code = blockEditorRef.current?.getCode() || "";
-        // Update code editor with generated code
-        codeEditorRef.current?.setCode(code);
+        setDraftCode(code);
       } else {
-        code = codeEditorRef.current?.getCode() || "";
+        code = codeEditorRef.current?.getCode() || draftCode;
+        setDraftCode(code);
       }
 
       if (!code.trim()) {
@@ -205,13 +217,20 @@ export default function EditorWorkspace({ initialProjectId }: EditorWorkspacePro
 
   const handleSave = async () => {
     try {
+      const blocksXml = mode === "blocks"
+        ? (blockEditorRef.current?.getWorkspaceXml() ?? draftBlocksXml)
+        : draftBlocksXml;
+      const code = mode === "blocks"
+        ? (blockEditorRef.current?.getCode() ?? draftCode)
+        : (codeEditorRef.current?.getCode() ?? draftCode);
+
       const projectData = {
         id: projectId,
         title: projectTitle,
         description: projectDescription,
         mode,
-        blocksXml: blockEditorRef.current?.getWorkspaceXml() || "",
-        code: codeEditorRef.current?.getCode() || "",
+        blocksXml,
+        code,
         sprites: JSON.parse(JSON.stringify(sprites)), // Deep copy
         backdrop: backdrop,
         zoom: zoom,
@@ -261,6 +280,8 @@ export default function EditorWorkspace({ initialProjectId }: EditorWorkspacePro
     setProjectTitle("Untitled Project");
     setProjectDescription("");
     setMode("blocks");
+    setDraftBlocksXml("");
+    setDraftCode("");
     
     // Editor'ları temizle
     blockEditorRef.current?.loadWorkspaceXml("");
@@ -290,6 +311,8 @@ export default function EditorWorkspace({ initialProjectId }: EditorWorkspacePro
         setProjectId(project.id);
         setProjectTitle(project.title);
         setProjectDescription(project.description || "");
+        setDraftBlocksXml(project.blocksXml || "");
+        setDraftCode(project.code || "");
         setMode(project.mode || "blocks");
         
         // Load full editor state first
@@ -302,18 +325,14 @@ export default function EditorWorkspace({ initialProjectId }: EditorWorkspacePro
           });
         }
         
-        // Load blocks workspace
-        if (project.blocksXml) {
-          // Use setTimeout to ensure BlockEditor is mounted
-          setTimeout(() => {
-            blockEditorRef.current?.loadWorkspaceXml(project.blocksXml);
-          }, 100);
-        }
-        
-        // Load code
-        if (project.code) {
-          codeEditorRef.current?.setCode(project.code);
-        }
+        // Best-effort: push into currently mounted editor
+        setTimeout(() => {
+          if ((project.mode || "blocks") === "blocks") {
+            blockEditorRef.current?.loadWorkspaceXml(project.blocksXml || "");
+          } else {
+            codeEditorRef.current?.setCode(project.code || "");
+          }
+        }, 0);
         
         // Mark as last opened project
         localStorage.setItem("codecraft_last_project", project.id);
@@ -339,7 +358,9 @@ export default function EditorWorkspace({ initialProjectId }: EditorWorkspacePro
         title: projectTitle,
         description: projectDescription,
         mode,
-        code: codeEditorRef.current?.getCode() || "",
+        code: mode === "blocks"
+          ? (blockEditorRef.current?.getCode() ?? draftCode)
+          : (codeEditorRef.current?.getCode() ?? draftCode),
         sprites: sprites,
         backdrop: backdrop,
         exportedAt: new Date().toISOString(),
@@ -522,7 +543,11 @@ export default function EditorWorkspace({ initialProjectId }: EditorWorkspacePro
           </div>
           
           <div className="flex-1 overflow-hidden">
-            {mode === "blocks" ? <BlockEditor ref={blockEditorRef} /> : <CodeEditor ref={codeEditorRef} />}
+            {mode === "blocks" ? (
+              <BlockEditor ref={blockEditorRef} initialXml={draftBlocksXml} />
+            ) : (
+              <CodeEditor ref={codeEditorRef} initialCode={draftCode} />
+            )}
           </div>
         </div>
 
