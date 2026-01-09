@@ -2,6 +2,14 @@ import * as Blockly from "blockly";
 import { javascriptGenerator } from "blockly/javascript";
 
 // Define code generators for custom blocks
+
+// ===== EVENTS =====
+javascriptGenerator.forBlock["when_flag_clicked"] = function (block: Blockly.Block) {
+  const code = javascriptGenerator.statementToCode(block, "DO");
+  return `(async function() {\n${code}})();\n`;
+};
+
+// ===== MOTION =====
 javascriptGenerator.forBlock["move_forward"] = function (block: Blockly.Block) {
   const steps = block.getFieldValue("STEPS");
   return `await moveForward(${steps});\n`;
@@ -14,25 +22,109 @@ javascriptGenerator.forBlock["turn"] = function (block: Blockly.Block) {
   return `await turn(${angle});\n`;
 };
 
-javascriptGenerator.forBlock["say"] = function (block: Blockly.Block) {
-  const text = block.getFieldValue("TEXT");
-  return `say("${text}");\nawait wait(2000);\nsay("");\n`;
-};
-
 javascriptGenerator.forBlock["go_to_xy"] = function (block: Blockly.Block) {
   const x = block.getFieldValue("X");
   const y = block.getFieldValue("Y");
   return `await goTo(${x}, ${y});\n`;
 };
 
-javascriptGenerator.forBlock["point_in_direction"] = function (block: Blockly.Block) {
-  const direction = block.getFieldValue("DIRECTION");
-  return `pointTowards('${direction}');\n`;
+javascriptGenerator.forBlock["glide_to_xy"] = function (block: Blockly.Block) {
+  const x = block.getFieldValue("X");
+  const y = block.getFieldValue("Y");
+  const secs = block.getFieldValue("SECS");
+  return `await glideTo(${x}, ${y}, ${secs});\n`;
 };
 
-javascriptGenerator.forBlock["when_flag_clicked"] = function (block: Blockly.Block) {
-  const code = javascriptGenerator.statementToCode(block, "DO");
-  return `(async function() {\n${code}})();\n`;
+javascriptGenerator.forBlock["point_in_direction"] = function (block: Blockly.Block) {
+  const angle = block.getFieldValue("ANGLE");
+  return `setRotation(${angle});\n`;
+};
+
+javascriptGenerator.forBlock["change_x"] = function (block: Blockly.Block) {
+  const dx = block.getFieldValue("DX");
+  return `changeX(${dx});\n`;
+};
+
+javascriptGenerator.forBlock["change_y"] = function (block: Blockly.Block) {
+  const dy = block.getFieldValue("DY");
+  return `changeY(${dy});\n`;
+};
+
+javascriptGenerator.forBlock["set_x"] = function (block: Blockly.Block) {
+  const x = block.getFieldValue("X");
+  return `setX(${x});\n`;
+};
+
+javascriptGenerator.forBlock["set_y"] = function (block: Blockly.Block) {
+  const y = block.getFieldValue("Y");
+  return `setY(${y});\n`;
+};
+
+// ===== LOOKS =====
+javascriptGenerator.forBlock["say"] = function (block: Blockly.Block) {
+  const text = block.getFieldValue("TEXT");
+  return `say("${text}");\nawait wait(2000);\nsay("");\n`;
+};
+
+javascriptGenerator.forBlock["say_for_secs"] = function (block: Blockly.Block) {
+  const text = block.getFieldValue("TEXT");
+  const secs = block.getFieldValue("SECS");
+  return `say("${text}");\nawait wait(${secs} * 1000);\nsay("");\n`;
+};
+
+javascriptGenerator.forBlock["show"] = function (block: Blockly.Block) {
+  return `show();\n`;
+};
+
+javascriptGenerator.forBlock["hide"] = function (block: Blockly.Block) {
+  return `hide();\n`;
+};
+
+javascriptGenerator.forBlock["change_size"] = function (block: Blockly.Block) {
+  const change = block.getFieldValue("CHANGE");
+  return `changeSize(${change});\n`;
+};
+
+javascriptGenerator.forBlock["set_size"] = function (block: Blockly.Block) {
+  const size = block.getFieldValue("SIZE");
+  return `setSize(${size});\n`;
+};
+
+// ===== CONTROL =====
+javascriptGenerator.forBlock["wait_seconds"] = function (block: Blockly.Block) {
+  const seconds = block.getFieldValue("SECONDS");
+  return `await wait(${seconds} * 1000);\n`;
+};
+
+javascriptGenerator.forBlock["repeat_times"] = function (block: Blockly.Block) {
+  const times = block.getFieldValue("TIMES");
+  const branch = javascriptGenerator.statementToCode(block, "DO");
+  return `for(let i = 0; i < ${times}; i++) {\n${branch}}\n`;
+};
+
+javascriptGenerator.forBlock["forever"] = function (block: Blockly.Block) {
+  const branch = javascriptGenerator.statementToCode(block, "DO");
+  return `while(true) {\n${branch}}\n`;
+};
+
+javascriptGenerator.forBlock["if_then"] = function (block: Blockly.Block) {
+  const condition = javascriptGenerator.valueToCode(block, "CONDITION", 0) || "false";
+  const branch = javascriptGenerator.statementToCode(block, "DO");
+  return `if(${condition}) {\n${branch}}\n`;
+};
+
+javascriptGenerator.forBlock["if_then_else"] = function (block: Blockly.Block) {
+  const condition = javascriptGenerator.valueToCode(block, "CONDITION", 0) || "false";
+  const branch1 = javascriptGenerator.statementToCode(block, "DO");
+  const branch2 = javascriptGenerator.statementToCode(block, "ELSE");
+  return `if(${condition}) {\n${branch1}} else {\n${branch2}}\n`;
+};
+
+// ===== OPERATORS =====
+javascriptGenerator.forBlock["random_number"] = function (block: Blockly.Block) {
+  const from = block.getFieldValue("FROM");
+  const to = block.getFieldValue("TO");
+  return [`Math.floor(Math.random() * (${to} - ${from} + 1)) + ${from}`, 0];
 };
 
 export function generateCode(workspace: Blockly.WorkspaceSvg): string {
@@ -45,9 +137,16 @@ export interface SpriteCommands {
   say: (text: string) => void;
   wait: (ms: number) => Promise<void>;
   goTo: (x: number, y: number) => Promise<void>;
+  glideTo: (x: number, y: number, secs: number) => Promise<void>;
   setRotation: (degrees: number) => void;
   changeX: (delta: number) => void;
   changeY: (delta: number) => void;
+  setX: (x: number) => void;
+  setY: (y: number) => void;
+  show: () => void;
+  hide: () => void;
+  changeSize: (delta: number) => void;
+  setSize: (size: number) => void;
   pointTowards: (direction: 'up' | 'down' | 'left' | 'right') => void;
 }
 
@@ -173,6 +272,10 @@ export function createRuntime(
       await smoothMove(x, y);
     },
 
+    glideTo: async (x: number, y: number, secs: number) => {
+      await smoothMove(x, y, secs * 1000);
+    },
+
     setRotation: (degrees: number) => {
       currentRotation = degrees;
       updateSprite({ rotation: currentRotation });
@@ -188,6 +291,34 @@ export function createRuntime(
       const clamped = clampToBounds(currentX, currentY + delta);
       currentY = clamped.y;
       updateSprite({ y: currentY });
+    },
+
+    setX: (x: number) => {
+      const clamped = clampToBounds(x, currentY);
+      currentX = clamped.x;
+      updateSprite({ x: currentX });
+    },
+
+    setY: (y: number) => {
+      const clamped = clampToBounds(currentX, y);
+      currentY = clamped.y;
+      updateSprite({ y: currentY });
+    },
+
+    show: () => {
+      updateSprite({ visible: true });
+    },
+
+    hide: () => {
+      updateSprite({ visible: false });
+    },
+
+    changeSize: (delta: number) => {
+      updateSprite((current: any) => ({ size: Math.max(5, Math.min(300, (current.size || 100) + delta)) }));
+    },
+
+    setSize: (size: number) => {
+      updateSprite({ size: Math.max(5, Math.min(300, size)) });
     },
 
     pointTowards: (direction: 'up' | 'down' | 'left' | 'right') => {
@@ -209,9 +340,16 @@ export async function executeCode(
     const say = runtime.say;
     const wait = runtime.wait;
     const goTo = runtime.goTo;
+    const glideTo = runtime.glideTo;
     const setRotation = runtime.setRotation;
     const changeX = runtime.changeX;
     const changeY = runtime.changeY;
+    const setX = runtime.setX;
+    const setY = runtime.setY;
+    const show = runtime.show;
+    const hide = runtime.hide;
+    const changeSize = runtime.changeSize;
+    const setSize = runtime.setSize;
     const pointTowards = runtime.pointTowards;
 
     // Execute code
@@ -222,13 +360,37 @@ export async function executeCode(
       "say",
       "wait",
       "goTo",
+      "glideTo",
       "setRotation",
       "changeX",
       "changeY",
+      "setX",
+      "setY",
+      "show",
+      "hide",
+      "changeSize",
+      "setSize",
       "pointTowards",
       code
     );
-    await fn(moveForward, turn, say, wait, goTo, setRotation, changeX, changeY, pointTowards);
+    await fn(
+      moveForward,
+      turn,
+      say,
+      wait,
+      goTo,
+      glideTo,
+      setRotation,
+      changeX,
+      changeY,
+      setX,
+      setY,
+      show,
+      hide,
+      changeSize,
+      setSize,
+      pointTowards
+    );
   } catch (error) {
     console.error("Execution error:", error);
     throw error;

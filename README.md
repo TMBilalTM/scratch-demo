@@ -62,8 +62,8 @@ Modern bir Scratch benzeri eğitim platformu - Her yaş için programlama öğre
 
 ```bash
 # Repository'yi klonla
-git clone https://github.com/yourusername/codecraft.git
-cd codecraft
+git clone https://github.com/TMBilalTM/scratch-demo.git
+cd scratch-demo
 
 # Bağımlılıkları yükle
 npm install
