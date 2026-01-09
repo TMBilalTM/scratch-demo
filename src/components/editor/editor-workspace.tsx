@@ -74,6 +74,27 @@ export default function EditorWorkspace({ initialProjectId }: EditorWorkspacePro
   } = useEditorStore();
   const { toast } = useToast();
 
+  // Persist Share dialog open state across refreshes (per project)
+  useEffect(() => {
+    try {
+      const key = `codecraft_share_open:${projectId}`;
+      const persisted = localStorage.getItem(key);
+      if (persisted === "1") setShowShare(true);
+    } catch {
+      // ignore storage errors
+    }
+  }, [projectId]);
+
+  useEffect(() => {
+    try {
+      const key = `codecraft_share_open:${projectId}`;
+      if (showShare) localStorage.setItem(key, "1");
+      else localStorage.removeItem(key);
+    } catch {
+      // ignore storage errors
+    }
+  }, [projectId, showShare]);
+
   const handleModeChange = (newMode: EditorMode) => {
     if (newMode === mode) return;
 

@@ -24,6 +24,64 @@ export function StageCanvas() {
   const [draggedSpriteId, setDraggedSpriteId] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
+  const loadSvgAsImage = (
+    svg: string,
+    onLoad: (img: HTMLImageElement) => void,
+    onFail: () => void,
+    context: { kind: "backdrop" | "sprite"; id: string }
+  ) => {
+    if (!svg?.trim()) {
+      onFail();
+      return () => {};
+    }
+
+    const img = new Image();
+
+    // Prefer data URL: avoids some blob URL decoding/CSP edge cases.
+    const dataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    let blobUrl: string | null = null;
+    let settled = false;
+
+    const cleanup = () => {
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+    };
+
+    img.onload = () => {
+      if (settled) return;
+      settled = true;
+      onLoad(img);
+      cleanup();
+    };
+
+    img.onerror = () => {
+      if (settled) return;
+
+      // Fallback: blob URL
+      if (!blobUrl) {
+        try {
+          const svgBlob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+          blobUrl = URL.createObjectURL(svgBlob);
+          img.src = blobUrl;
+          return;
+        } catch {
+          // ignore
+        }
+      }
+
+      settled = true;
+      // Keep this as warn (not error) to avoid scaring users; still provides debug info.
+      console.warn(`Failed to load ${context.kind} SVG as image`, {
+        id: context.id,
+        svgLength: svg.length,
+      });
+      onFail();
+      cleanup();
+    };
+
+    img.src = dataUrl;
+    return cleanup;
+  };
+
   // Backdrop SVG'sini Image'a çevir
   useEffect(() => {
     const backdropData = defaultBackdrops.find((b) => b.id === backdrop);
@@ -32,24 +90,12 @@ export function StageCanvas() {
       return;
     }
 
-    const img = new Image();
-    const svgBlob = new Blob([backdropData.svg], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(svgBlob);
-    
-    img.onload = () => {
-      setBackdropImage(img);
-      URL.revokeObjectURL(url);
-    };
-    
-    img.onerror = () => {
-      console.error('Failed to load backdrop image');
-      setBackdropImage(null);
-      URL.revokeObjectURL(url);
-    };
-    
-    img.src = url;
-
-    return () => URL.revokeObjectURL(url);
+    return loadSvgAsImage(
+      backdropData.svg,
+      (img) => setBackdropImage(img),
+      () => setBackdropImage(null),
+      { kind: "backdrop", id: backdropData.id }
+    );
   }, [backdrop]);
 
   // Sprite SVG'lerini Image'lara çevir
@@ -58,22 +104,17 @@ export function StageCanvas() {
     
     sprites.forEach((sprite) => {
       if (sprite.costumeSvg) {
-        const img = new Image();
-        const svgBlob = new Blob([sprite.costumeSvg], { type: 'image/svg+xml;charset=utf-8' });
-        const url = URL.createObjectURL(svgBlob);
-        
-        img.onload = () => {
-          newImages.set(sprite.id, img);
-          setSpriteImages(new Map(newImages));
-          URL.revokeObjectURL(url);
-        };
-        
-        img.onerror = () => {
-          console.error(`Failed to load sprite image: ${sprite.id}`);
-          URL.revokeObjectURL(url);
-        };
-        
-        img.src = url;
+        loadSvgAsImage(
+          sprite.costumeSvg,
+          (img) => {
+            newImages.set(sprite.id, img);
+            setSpriteImages(new Map(newImages));
+          },
+          () => {
+            // no-op: sprite will fall back to default triangle
+          },
+          { kind: "sprite", id: sprite.id }
+        );
       }
     });
   }, [sprites]);

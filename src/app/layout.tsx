@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   authors: [{ name: "CodeCraft Team" }],
   creator: "CodeCraft",
   publisher: "CodeCraft",
-  metadataBase: new URL("https://codecraft.dev"),
+  metadataBase: new URL("https://bilaltm.live"),
   openGraph: {
     title: "CodeCraft - Learn Programming Through Play",
     description: "Learn programming through visual block-based coding and text-based programming",

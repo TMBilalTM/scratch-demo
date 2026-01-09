@@ -1,7 +1,7 @@
 import { MetadataRoute } from "next";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = "https://codecraft.dev";
+  const baseUrl = "https://bilaltm.live";
   
   return [
     {

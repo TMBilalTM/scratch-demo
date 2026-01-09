@@ -4,4 +4,4 @@ Allow: /
 Disallow: /api/
 Disallow: /editor
 
-Sitemap: https://codecraft.dev/sitemap.xml
+Sitemap: https://bilaltm.live/sitemap.xml
