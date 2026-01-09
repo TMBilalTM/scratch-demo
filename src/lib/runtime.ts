@@ -127,6 +127,36 @@ javascriptGenerator.forBlock["random_number"] = function (block: Blockly.Block) 
   return [`Math.floor(Math.random() * (${to} - ${from} + 1)) + ${from}`, 0];
 };
 
+// ===== SENSING =====
+javascriptGenerator.forBlock["mouse_x"] = function () {
+  return ["mouseX()", 0];
+};
+
+javascriptGenerator.forBlock["mouse_y"] = function () {
+  return ["mouseY()", 0];
+};
+
+javascriptGenerator.forBlock["key_pressed"] = function (block: Blockly.Block) {
+  const key = block.getFieldValue("KEY");
+  return [`keyPressed("${key}")`, 0];
+};
+
+javascriptGenerator.forBlock["touching_mouse"] = function () {
+  return [`touching("mouse-pointer")`, 0];
+};
+
+javascriptGenerator.forBlock["distance_to_mouse"] = function () {
+  return [`distanceTo(mouseX(), mouseY())`, 0];
+};
+
+javascriptGenerator.forBlock["timer_value"] = function () {
+  return ["timer()", 0];
+};
+
+javascriptGenerator.forBlock["reset_timer"] = function () {
+  return "resetTimer();\n";
+};
+
 export function generateCode(workspace: Blockly.WorkspaceSvg): string {
   return javascriptGenerator.workspaceToCode(workspace);
 }
@@ -148,6 +178,15 @@ export interface SpriteCommands {
   changeSize: (delta: number) => void;
   setSize: (size: number) => void;
   pointTowards: (direction: 'up' | 'down' | 'left' | 'right') => void;
+  
+  // Sensing
+  mouseX: () => number;
+  mouseY: () => number;
+  keyPressed: (key: string) => boolean;
+  touching: (target: string) => boolean;
+  distanceTo: (x: number, y: number) => number;
+  timer: () => number;
+  resetTimer: () => void;
 }
 
 interface SpriteState {
@@ -159,7 +198,8 @@ interface SpriteState {
 export function createRuntime(
   initialState: SpriteState,
   updateSprite: (updates: any) => void,
-  onComplete: () => void
+  onComplete: () => void,
+  getStoreState?: () => any
 ): SpriteCommands {
   let currentX = initialState.x;
   let currentY = initialState.y;
@@ -326,6 +366,52 @@ export function createRuntime(
       currentRotation = directions[direction];
       updateSprite({ rotation: currentRotation });
     },
+    
+    // Sensing
+    mouseX: () => {
+      if (!getStoreState) return 0;
+      return getStoreState().mouseX;
+    },
+    
+    mouseY: () => {
+      if (!getStoreState) return 0;
+      return getStoreState().mouseY;
+    },
+    
+    keyPressed: (key: string) => {
+      if (!getStoreState) return false;
+      const pressedKeys = getStoreState().pressedKeys;
+      return pressedKeys.has(key.toLowerCase());
+    },
+    
+    touching: (target: string) => {
+      // Simplified collision detection
+      if (!getStoreState) return false;
+      if (target === 'mouse-pointer') {
+        const state = getStoreState();
+        const dx = currentX - state.mouseX;
+        const dy = currentY - state.mouseY;
+        return Math.sqrt(dx * dx + dy * dy) < 50;
+      }
+      return false;
+    },
+    
+    distanceTo: (x: number, y: number) => {
+      const dx = currentX - x;
+      const dy = currentY - y;
+      return Math.sqrt(dx * dx + dy * dy);
+    },
+    
+    timer: () => {
+      if (!getStoreState) return 0;
+      return getStoreState().getTimer();
+    },
+    
+    resetTimer: () => {
+      if (getStoreState) {
+        getStoreState().resetTimer();
+      }
+    },
   };
 }
 
@@ -351,6 +437,15 @@ export async function executeCode(
     const changeSize = runtime.changeSize;
     const setSize = runtime.setSize;
     const pointTowards = runtime.pointTowards;
+    
+    // Sensing
+    const mouseX = runtime.mouseX;
+    const mouseY = runtime.mouseY;
+    const keyPressed = runtime.keyPressed;
+    const touching = runtime.touching;
+    const distanceTo = runtime.distanceTo;
+    const timer = runtime.timer;
+    const resetTimer = runtime.resetTimer;
 
     // Execute code
     const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
@@ -371,6 +466,13 @@ export async function executeCode(
       "changeSize",
       "setSize",
       "pointTowards",
+      "mouseX",
+      "mouseY",
+      "keyPressed",
+      "touching",
+      "distanceTo",
+      "timer",
+      "resetTimer",
       code
     );
     await fn(
@@ -388,6 +490,16 @@ export async function executeCode(
       show,
       hide,
       changeSize,
+      setSize,
+      pointTowards,
+      mouseX,
+      mouseY,
+      keyPressed,
+      touching,
+      distanceTo,
+      timer,
+      resetTimer
+    );
       setSize,
       pointTowards
     );

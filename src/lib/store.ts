@@ -23,6 +23,13 @@ interface EditorStore {
   gridEnabled: boolean;
   backdrop: string;
   
+  // Sensing state
+  mouseX: number;
+  mouseY: number;
+  pressedKeys: Set<string>;
+  timer: number;
+  timerStartTime: number;
+  
   addSprite: (sprite: Sprite) => void;
   updateSprite: (id: string, updates: Partial<Sprite>) => void;
   deleteSprite: (id: string) => void;
@@ -36,6 +43,12 @@ interface EditorStore {
   saveInitialState: () => void;
   setSprites: (sprites: Sprite[]) => void;
   loadProjectState: (state: { sprites: Sprite[]; backdrop: string; zoom?: number; gridEnabled?: boolean }) => void;
+  
+  // Sensing actions
+  setMousePosition: (x: number, y: number) => void;
+  setKeyPressed: (key: string, pressed: boolean) => void;
+  resetTimer: () => void;
+  getTimer: () => number;
 }
 
 const defaultSprite: Sprite = {
@@ -50,7 +63,7 @@ const defaultSprite: Sprite = {
   color: "#FF6B6B",
 };
 
-export const useEditorStore = create<EditorStore>((set) => ({
+export const useEditorStore = create<EditorStore>((set, get) => ({
   sprites: [defaultSprite],
   initialSprites: [defaultSprite], // Başlangıç durumunu da sakla
   selectedSpriteId: "sprite-1",
@@ -58,6 +71,13 @@ export const useEditorStore = create<EditorStore>((set) => ({
   zoom: 1,
   gridEnabled: true,
   backdrop: "sky",
+  
+  // Sensing state
+  mouseX: 0,
+  mouseY: 0,
+  pressedKeys: new Set<string>(),
+  timer: 0,
+  timerStartTime: Date.now(),
   
   addSprite: (sprite) =>
     set((state) => {
@@ -133,4 +153,25 @@ export const useEditorStore = create<EditorStore>((set) => ({
       zoom: state.zoom ?? 1,
       gridEnabled: state.gridEnabled ?? true,
     })),
+  
+  // Sensing actions
+  setMousePosition: (x, y) => set({ mouseX: x, mouseY: y }),
+  
+  setKeyPressed: (key, pressed) =>
+    set((state) => {
+      const newKeys = new Set(state.pressedKeys);
+      if (pressed) {
+        newKeys.add(key.toLowerCase());
+      } else {
+        newKeys.delete(key.toLowerCase());
+      }
+      return { pressedKeys: newKeys };
+    }),
+  
+  resetTimer: () => set({ timerStartTime: Date.now(), timer: 0 }),
+  
+  getTimer: () => {
+    const state = get();
+    return (Date.now() - state.timerStartTime) / 1000;
+  },
 }));

@@ -6,7 +6,18 @@ import { defaultBackdrops, defaultSprites } from "@/lib/assets";
 
 export function StageCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { sprites, selectedSpriteId, zoom, gridEnabled, backdrop, selectSprite, updateSprite, saveInitialState } = useEditorStore();
+  const { 
+    sprites, 
+    selectedSpriteId, 
+    zoom, 
+    gridEnabled, 
+    backdrop, 
+    selectSprite, 
+    updateSprite, 
+    saveInitialState,
+    setMousePosition,
+    setKeyPressed,
+  } = useEditorStore();
   const [backdropImage, setBackdropImage] = useState<HTMLImageElement | null>(null);
   const [spriteImages, setSpriteImages] = useState<Map<string, HTMLImageElement>>(new Map());
   const [isDragging, setIsDragging] = useState(false);
@@ -53,6 +64,37 @@ export function StageCanvas() {
       }
     });
   }, [sprites]);
+
+  // Keyboard listeners
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      setKeyPressed(e.key, true);
+    };
+    
+    const handleKeyUp = (e: KeyboardEvent) => {
+      setKeyPressed(e.key, false);
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [setKeyPressed]);
+  
+  // Mouse position tracker
+  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / zoom) - (canvas.width / zoom / 2);
+    const y = ((canvas.height / zoom / 2) - ((e.clientY - rect.top) / zoom));
+    
+    setMousePosition(Math.round(x), Math.round(y));
+  };
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -336,7 +378,10 @@ export function StageCanvas() {
           height={480}
           className="cursor-pointer"
           onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
+          onMouseMove={(e) => {
+            handleMouseMove(e);
+            handleCanvasMouseMove(e);
+          }}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseLeave}
           onClick={handleCanvasClick}

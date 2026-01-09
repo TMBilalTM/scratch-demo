@@ -149,7 +149,8 @@ export default function EditorWorkspace({ initialProjectId }: EditorWorkspacePro
             rotation: sprite.rotation,
           },
           (updates) => updateSprite(sprite.id, updates),
-          () => {}
+          () => {},
+          () => useEditorStore.getState()
         );
         return executeCode(code, runtime);
       });
