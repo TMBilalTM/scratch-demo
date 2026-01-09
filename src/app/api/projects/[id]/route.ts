@@ -6,6 +6,7 @@ import { z } from "zod";
 const updateSchema = z.object({
   title: z.string().min(1).max(100).optional(),
   description: z.string().max(500).optional(),
+  thumbnail: z.string().max(2_000_000).nullable().optional(),
   blocks: z.string().optional(),
   code: z.string().optional(),
   mode: z.enum(["blocks", "code"]).optional(),

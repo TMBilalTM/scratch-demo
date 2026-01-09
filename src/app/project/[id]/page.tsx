@@ -55,6 +55,7 @@ export default function ProjectPage() {
           id: p.id,
           title: p.title,
           description: p.description || "",
+          thumbnail: p.thumbnail || null,
           mode: p.mode || "blocks",
           code: p.code || "",
           isPublic: Boolean(p.isPublic),

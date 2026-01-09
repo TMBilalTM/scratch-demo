@@ -428,6 +428,7 @@ export function StageCanvas() {
       <div className="relative rounded-2xl border-4 border-border bg-white shadow-2xl overflow-hidden">
         <canvas
           ref={canvasRef}
+          data-codecraft-stage="main"
           width={640}
           height={480}
           className="cursor-pointer"

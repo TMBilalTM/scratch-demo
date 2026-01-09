@@ -48,6 +48,7 @@ export default function EditorWorkspace({ initialProjectId }: EditorWorkspacePro
   const [projectTitle, setProjectTitle] = useState("Untitled Project");
   const [projectDescription, setProjectDescription] = useState("");
   const [projectId, setProjectId] = useState(() => `project-${Date.now()}`);
+  const [projectThumbnail, setProjectThumbnail] = useState<string | null>(null);
   const [isProjectPublic, setIsProjectPublic] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [showAssets, setShowAssets] = useState(false);
@@ -75,7 +76,7 @@ export default function EditorWorkspace({ initialProjectId }: EditorWorkspacePro
   } = useEditorStore();
   const { toast } = useToast();
 
-  const syncProjectToCloud = async (nextIsPublic?: boolean) => {
+  const syncProjectToCloud = async (opts?: { isPublic?: boolean; thumbnail?: string | null }) => {
     if (!session?.user?.id) return;
 
     const blocksXml = mode === "blocks"
@@ -89,6 +90,10 @@ export default function EditorWorkspace({ initialProjectId }: EditorWorkspacePro
       id: projectId,
       title: projectTitle,
       description: projectDescription || undefined,
+      thumbnail:
+        typeof opts?.thumbnail === "string" || opts?.thumbnail === null
+          ? opts.thumbnail
+          : projectThumbnail,
       // Store full editor state in `blocks` so shared projects can be reconstructed.
       blocks: JSON.stringify({
         blocksXml,
@@ -99,7 +104,7 @@ export default function EditorWorkspace({ initialProjectId }: EditorWorkspacePro
       }),
       code,
       mode,
-      isPublic: typeof nextIsPublic === "boolean" ? nextIsPublic : isProjectPublic,
+      isPublic: typeof opts?.isPublic === "boolean" ? opts.isPublic : isProjectPublic,
     };
 
     try {
@@ -294,10 +299,67 @@ export default function EditorWorkspace({ initialProjectId }: EditorWorkspacePro
         ? (blockEditorRef.current?.getCode() ?? draftCode)
         : (codeEditorRef.current?.getCode() ?? draftCode);
 
+      const captureInitialThumbnail = async (): Promise<string | null> => {
+        try {
+          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+          const canvas = document.querySelector<HTMLCanvasElement>(
+            'canvas[data-codecraft-stage="main"]'
+          );
+          if (!canvas) return null;
+
+          const targetWidth = 640;
+          const targetHeight = 360;
+          const targetAspect = targetWidth / targetHeight;
+
+          const srcWidth = canvas.width;
+          const srcHeight = canvas.height;
+          if (srcWidth <= 0 || srcHeight <= 0) return null;
+
+          // Center-crop 4:3 stage into 16:9 banner
+          const cropHeight = Math.round(srcWidth / targetAspect);
+          const cropY = Math.max(0, Math.round((srcHeight - cropHeight) / 2));
+          const safeCropHeight = Math.min(cropHeight, srcHeight);
+
+          const out = document.createElement("canvas");
+          out.width = targetWidth;
+          out.height = targetHeight;
+          const ctx = out.getContext("2d");
+          if (!ctx) return null;
+
+          ctx.drawImage(
+            canvas,
+            0,
+            cropY,
+            srcWidth,
+            safeCropHeight,
+            0,
+            0,
+            targetWidth,
+            targetHeight
+          );
+
+          return out.toDataURL("image/png");
+        } catch {
+          // Can fail if canvas is tainted by cross-origin assets
+          return null;
+        }
+      };
+
+      // Save to localStorage
+      const saved = localStorage.getItem("codecraft_projects");
+      const projects = saved ? JSON.parse(saved) : [];
+      const existingIndex = projects.findIndex((p: any) => p.id === projectId);
+
+      const existing = existingIndex >= 0 ? projects[existingIndex] : null;
+      const existingThumb = typeof existing?.thumbnail === "string" ? existing.thumbnail : null;
+      const nextThumbnail = existingThumb ?? projectThumbnail ?? (await captureInitialThumbnail());
+
       const projectData = {
         id: projectId,
         title: projectTitle,
         description: projectDescription,
+        thumbnail: nextThumbnail,
         mode,
         blocksXml,
         code,
@@ -307,14 +369,9 @@ export default function EditorWorkspace({ initialProjectId }: EditorWorkspacePro
         zoom: zoom,
         gridEnabled: gridEnabled,
         updatedAt: new Date().toISOString(),
-        views: 0,
-        likes: 0,
+        views: typeof existing?.views === "number" ? existing.views : 0,
+        likes: typeof existing?.likes === "number" ? existing.likes : 0,
       };
-
-      // Save to localStorage
-      const saved = localStorage.getItem("codecraft_projects");
-      const projects = saved ? JSON.parse(saved) : [];
-      const existingIndex = projects.findIndex((p: any) => p.id === projectId);
       
       if (existingIndex >= 0) {
         projects[existingIndex] = projectData;
@@ -325,10 +382,11 @@ export default function EditorWorkspace({ initialProjectId }: EditorWorkspacePro
       localStorage.setItem("codecraft_projects", JSON.stringify(projects));
       localStorage.setItem("codecraft_last_project", projectId);
       setLastSaved(new Date());
+      setProjectThumbnail(nextThumbnail);
 
       // If the project is public and user is logged in, keep cloud copy in sync.
       if (isProjectPublic && session?.user?.id) {
-        void syncProjectToCloud();
+        void syncProjectToCloud({ thumbnail: nextThumbnail });
       }
       
       toast({
@@ -355,6 +413,7 @@ export default function EditorWorkspace({ initialProjectId }: EditorWorkspacePro
     setProjectId(newProjectId);
     setProjectTitle("Untitled Project");
     setProjectDescription("");
+    setProjectThumbnail(null);
     setMode("blocks");
     setDraftBlocksXml("");
     setDraftCode("");
@@ -386,6 +445,7 @@ export default function EditorWorkspace({ initialProjectId }: EditorWorkspacePro
         setProjectId(project.id);
         setProjectTitle(project.title);
         setProjectDescription(project.description || "");
+        setProjectThumbnail(typeof project.thumbnail === "string" ? project.thumbnail : null);
         setDraftBlocksXml(project.blocksXml || "");
         setDraftCode(project.code || "");
         setIsProjectPublic(Boolean(project.isPublic));
@@ -436,6 +496,7 @@ export default function EditorWorkspace({ initialProjectId }: EditorWorkspacePro
             id: p.id,
             title: p.title,
             description: p.description || "",
+            thumbnail: p.thumbnail || null,
             mode: p.mode || "blocks",
             code: p.code || "",
             isPublic: Boolean(p.isPublic),
@@ -749,10 +810,20 @@ export default function EditorWorkspace({ initialProjectId }: EditorWorkspacePro
 
           setIsProjectPublic(next);
           setTimeout(() => {
-            handleSave();
-            if (session?.user?.id) {
-              void syncProjectToCloud(next);
-            }
+            void (async () => {
+              await handleSave();
+
+              if (!session?.user?.id) return;
+              try {
+                const saved = localStorage.getItem("codecraft_projects");
+                const projects = saved ? JSON.parse(saved) : [];
+                const current = projects.find((p: any) => p.id === projectId);
+                const thumb = typeof current?.thumbnail === "string" ? current.thumbnail : null;
+                void syncProjectToCloud({ isPublic: next, thumbnail: thumb ?? projectThumbnail });
+              } catch {
+                void syncProjectToCloud({ isPublic: next, thumbnail: projectThumbnail });
+              }
+            })();
           }, 0);
         }}
       />

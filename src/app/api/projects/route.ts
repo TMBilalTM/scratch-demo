@@ -7,6 +7,7 @@ const projectSchema = z.object({
   id: z.string().min(1).max(200).optional(),
   title: z.string().min(1).max(100),
   description: z.string().max(500).optional(),
+  thumbnail: z.string().max(2_000_000).nullable().optional(),
   blocks: z.string(),
   code: z.string(),
   mode: z.enum(["blocks", "code"]),
@@ -90,6 +91,9 @@ export async function POST(request: NextRequest) {
           data: {
             title: validatedData.title,
             description: validatedData.description,
+            ...(validatedData.thumbnail !== undefined
+              ? { thumbnail: validatedData.thumbnail }
+              : {}),
             blocks: validatedData.blocks,
             code: validatedData.code,
             mode: validatedData.mode,
@@ -109,6 +113,9 @@ export async function POST(request: NextRequest) {
             id: validatedData.id,
             title: validatedData.title,
             description: validatedData.description,
+            ...(validatedData.thumbnail !== undefined
+              ? { thumbnail: validatedData.thumbnail }
+              : {}),
             blocks: validatedData.blocks,
             code: validatedData.code,
             mode: validatedData.mode,
