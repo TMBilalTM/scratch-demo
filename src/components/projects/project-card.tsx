@@ -23,7 +23,7 @@ interface ProjectCardProps {
 
 export function ProjectCard({ project }: ProjectCardProps) {
   return (
-    <Link href={`/editor?project=${project.id}`}>
+    <Link href={`/project/${project.id}`}>
       <Card className="group cursor-pointer overflow-hidden transition-all hover:shadow-lg">
         <CardHeader className="p-0">
           <div className="aspect-video w-full overflow-hidden bg-gradient-to-br from-primary/20 to-primary/5">

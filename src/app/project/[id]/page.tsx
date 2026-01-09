@@ -17,35 +17,87 @@ export default function ProjectPage() {
   const [projectData, setProjectData] = useState<any>(null);
 
   useEffect(() => {
-    // Check if project exists
-    const saved = localStorage.getItem("codecraft_projects");
-    if (saved) {
-      const projects = JSON.parse(saved);
-      const project = projects.find((p: any) => p.id === projectId);
-      setProjectExists(!!project);
-      setProjectData(project);
-      
-      if (project) {
-        // Set as last project so it auto-loads in editor
-        localStorage.setItem("codecraft_last_project", projectId);
-        
-        // Set page title and meta description
-        document.title = `${project.title} - CodeCraft`;
-        
-        // Update meta description
-        let metaDescription = document.querySelector('meta[name="description"]');
-        if (!metaDescription) {
-          metaDescription = document.createElement('meta');
-          metaDescription.setAttribute('name', 'description');
-          document.head.appendChild(metaDescription);
+    let cancelled = false;
+
+    const run = async () => {
+      try {
+        const saved = localStorage.getItem("codecraft_projects");
+        const projects = saved ? JSON.parse(saved) : [];
+        const local = projects.find((p: any) => p.id === projectId);
+
+        if (local) {
+          if (cancelled) return;
+          setProjectExists(true);
+          setProjectData(local);
+          localStorage.setItem("codecraft_last_project", projectId);
+          document.title = `${local.title} - CodeCraft`;
+          setLoading(false);
+          return;
         }
-        metaDescription.setAttribute(
-          'content', 
-          project.description || `${project.title} - Create amazing projects with CodeCraft, a visual programming platform for learning to code.`
-        );
+
+        // Not in local storage: try cloud
+        const res = await fetch(`/api/projects/${projectId}`);
+        if (!res.ok) {
+          if (cancelled) return;
+          setProjectExists(false);
+          setLoading(false);
+          return;
+        }
+
+        const data = await res.json();
+        const p = data?.project;
+        if (!p) {
+          if (cancelled) return;
+          setProjectExists(false);
+          setLoading(false);
+          return;
+        }
+
+        let reconstructed: any = {
+          id: p.id,
+          title: p.title,
+          description: p.description || "",
+          mode: p.mode || "blocks",
+          code: p.code || "",
+          isPublic: Boolean(p.isPublic),
+        };
+
+        try {
+          const parsed = JSON.parse(p.blocks);
+          reconstructed = {
+            ...reconstructed,
+            blocksXml: parsed?.blocksXml || "",
+            sprites: parsed?.sprites,
+            backdrop: parsed?.backdrop,
+            zoom: parsed?.zoom,
+            gridEnabled: parsed?.gridEnabled,
+          };
+        } catch {
+          reconstructed.blocksXml = typeof p.blocks === "string" ? p.blocks : "";
+        }
+
+        const nextProjects = Array.isArray(projects) ? projects.slice() : [];
+        nextProjects.push(reconstructed);
+        localStorage.setItem("codecraft_projects", JSON.stringify(nextProjects));
+        localStorage.setItem("codecraft_last_project", projectId);
+
+        if (cancelled) return;
+        setProjectExists(true);
+        setProjectData(reconstructed);
+        document.title = `${reconstructed.title} - CodeCraft`;
+        setLoading(false);
+      } catch (e) {
+        console.error("Failed to load project:", e);
+        if (cancelled) return;
+        setProjectExists(false);
+        setLoading(false);
       }
-    }
-    setLoading(false);
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
   }, [projectId]);
 
   if (loading) {

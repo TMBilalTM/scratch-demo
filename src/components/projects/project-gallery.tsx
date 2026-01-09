@@ -19,7 +19,7 @@ interface Project {
   createdAt: string;
 }
 
-export function ProjectGallery() {
+export function ProjectGallery({ publicOnly = false }: { publicOnly?: boolean }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "public">("public");
@@ -32,7 +32,7 @@ export function ProjectGallery() {
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      if (filter === "public") {
+      if (publicOnly || filter === "public") {
         params.set("public", "true");
       }
       
@@ -69,20 +69,22 @@ export function ProjectGallery() {
 
   return (
     <div>
-      <div className="mb-6 flex gap-2">
-        <Button
-          variant={filter === "public" ? "default" : "outline"}
-          onClick={() => setFilter("public")}
-        >
-          Public Projects
-        </Button>
-        <Button
-          variant={filter === "all" ? "default" : "outline"}
-          onClick={() => setFilter("all")}
-        >
-          All Projects
-        </Button>
-      </div>
+      {!publicOnly && (
+        <div className="mb-6 flex gap-2">
+          <Button
+            variant={filter === "public" ? "default" : "outline"}
+            onClick={() => setFilter("public")}
+          >
+            Public Projects
+          </Button>
+          <Button
+            variant={filter === "all" ? "default" : "outline"}
+            onClick={() => setFilter("all")}
+          >
+            All Projects
+          </Button>
+        </div>
+      )}
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {projects.map((project) => (

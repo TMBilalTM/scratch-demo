@@ -17,7 +17,7 @@ export default function ProjectsPage() {
           </p>
         </div>
         
-        <ProjectGallery />
+        <ProjectGallery publicOnly />
       </div>
     </main>
   );

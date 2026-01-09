@@ -75,6 +75,54 @@ export default function EditorWorkspace({ initialProjectId }: EditorWorkspacePro
   } = useEditorStore();
   const { toast } = useToast();
 
+  const syncProjectToCloud = async (nextIsPublic?: boolean) => {
+    if (!session?.user?.id) return;
+
+    const blocksXml = mode === "blocks"
+      ? (blockEditorRef.current?.getWorkspaceXml() ?? draftBlocksXml)
+      : draftBlocksXml;
+    const code = mode === "blocks"
+      ? (blockEditorRef.current?.getCode() ?? draftCode)
+      : (codeEditorRef.current?.getCode() ?? draftCode);
+
+    const payload = {
+      id: projectId,
+      title: projectTitle,
+      description: projectDescription || undefined,
+      // Store full editor state in `blocks` so shared projects can be reconstructed.
+      blocks: JSON.stringify({
+        blocksXml,
+        sprites,
+        backdrop,
+        zoom,
+        gridEnabled,
+      }),
+      code,
+      mode,
+      isPublic: typeof nextIsPublic === "boolean" ? nextIsPublic : isProjectPublic,
+    };
+
+    try {
+      const res = await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || "Failed to sync project");
+      }
+    } catch (error) {
+      console.error("Cloud sync failed:", error);
+      toast({
+        title: "Share sync failed",
+        description: error instanceof Error ? error.message : "Failed to sync sharing state",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Persist Share dialog open state across refreshes (per project)
   useEffect(() => {
     try {
@@ -277,6 +325,11 @@ export default function EditorWorkspace({ initialProjectId }: EditorWorkspacePro
       localStorage.setItem("codecraft_projects", JSON.stringify(projects));
       localStorage.setItem("codecraft_last_project", projectId);
       setLastSaved(new Date());
+
+      // If the project is public and user is logged in, keep cloud copy in sync.
+      if (isProjectPublic && session?.user?.id) {
+        void syncProjectToCloud();
+      }
       
       toast({
         title: "Project Saved!",
@@ -326,12 +379,10 @@ export default function EditorWorkspace({ initialProjectId }: EditorWorkspacePro
   const handleLoadProject = (id: string) => {
     try {
       const saved = localStorage.getItem("codecraft_projects");
-      if (!saved) return;
-      
-      const projects = JSON.parse(saved);
-      const project = projects.find((p: any) => p.id === id);
-      
-      if (project) {
+      const projects = saved ? JSON.parse(saved) : [];
+      const localProject = projects.find((p: any) => p.id === id);
+
+      const applyProject = (project: any) => {
         setProjectId(project.id);
         setProjectTitle(project.title);
         setProjectDescription(project.description || "");
@@ -339,8 +390,7 @@ export default function EditorWorkspace({ initialProjectId }: EditorWorkspacePro
         setDraftCode(project.code || "");
         setIsProjectPublic(Boolean(project.isPublic));
         setMode(project.mode || "blocks");
-        
-        // Load full editor state first
+
         if (project.sprites && project.backdrop) {
           loadProjectState({
             sprites: project.sprites,
@@ -349,8 +399,7 @@ export default function EditorWorkspace({ initialProjectId }: EditorWorkspacePro
             gridEnabled: project.gridEnabled,
           });
         }
-        
-        // Best-effort: push into currently mounted editor
+
         setTimeout(() => {
           if ((project.mode || "blocks") === "blocks") {
             blockEditorRef.current?.loadWorkspaceXml(project.blocksXml || "");
@@ -358,15 +407,72 @@ export default function EditorWorkspace({ initialProjectId }: EditorWorkspacePro
             codeEditorRef.current?.setCode(project.code || "");
           }
         }, 0);
-        
-        // Mark as last opened project
+
         localStorage.setItem("codecraft_last_project", project.id);
-        
+
         toast({
           title: "Project Loaded",
           description: `"${project.title}" opened successfully`,
         });
+      };
+
+      if (localProject) {
+        applyProject(localProject);
+        return;
       }
+
+      // Not found locally: try cloud (public projects, or owner when authenticated)
+      void (async () => {
+        try {
+          const res = await fetch(`/api/projects/${id}`);
+          if (!res.ok) {
+            throw new Error("Project not found");
+          }
+          const data = await res.json();
+          const p = data?.project;
+          if (!p) throw new Error("Project not found");
+
+          let reconstructed: any = {
+            id: p.id,
+            title: p.title,
+            description: p.description || "",
+            mode: p.mode || "blocks",
+            code: p.code || "",
+            isPublic: Boolean(p.isPublic),
+          };
+
+          // Try parse full editor state from p.blocks
+          try {
+            const parsed = JSON.parse(p.blocks);
+            reconstructed = {
+              ...reconstructed,
+              blocksXml: parsed?.blocksXml || "",
+              sprites: parsed?.sprites,
+              backdrop: parsed?.backdrop,
+              zoom: parsed?.zoom,
+              gridEnabled: parsed?.gridEnabled,
+            };
+          } catch {
+            // Fallback: treat `blocks` as raw blocksXml
+            reconstructed.blocksXml = typeof p.blocks === "string" ? p.blocks : "";
+          }
+
+          const nextProjects = Array.isArray(projects) ? projects.slice() : [];
+          if (!nextProjects.find((x: any) => x.id === reconstructed.id)) {
+            nextProjects.push(reconstructed);
+            localStorage.setItem("codecraft_projects", JSON.stringify(nextProjects));
+          }
+
+          applyProject(reconstructed);
+        } catch (error) {
+          console.error("Failed to load cloud project:", error);
+          toast({
+            title: "Project Not Found",
+            description: "This project doesn't exist or is private.",
+            variant: "destructive",
+          });
+        }
+      })();
     } catch (error) {
       console.error("Load error:", error);
       toast({
@@ -631,10 +737,22 @@ export default function EditorWorkspace({ initialProjectId }: EditorWorkspacePro
         projectTitle={projectTitle}
         isPublic={isProjectPublic}
         onIsPublicChange={(next) => {
+          if (next && !session?.user?.id) {
+            toast({
+              title: "Login required",
+              description: "You must be logged in to share publicly.",
+              variant: "destructive",
+            });
+            setIsProjectPublic(false);
+            return;
+          }
+
           setIsProjectPublic(next);
-          // Persist immediately so refresh keeps it even before autosave
           setTimeout(() => {
             handleSave();
+            if (session?.user?.id) {
+              void syncProjectToCloud(next);
+            }
           }, 0);
         }}
       />

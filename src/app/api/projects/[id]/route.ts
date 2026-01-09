@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { auth } from "@/auth";
 import { z } from "zod";
 
 const updateSchema = z.object({
@@ -38,11 +39,25 @@ export async function GET(
       );
     }
 
+    if (!project.isPublic) {
+      const session = await auth();
+      const viewerId = session?.user?.id;
+      if (!viewerId || viewerId !== project.userId) {
+        // Hide existence of private projects from non-owners.
+        return NextResponse.json(
+          { error: "Project not found" },
+          { status: 404 }
+        );
+      }
+    }
+
     // Increment views
-    await prisma.project.update({
-      where: { id },
-      data: { views: { increment: 1 } },
-    });
+    if (project.isPublic) {
+      await prisma.project.update({
+        where: { id },
+        data: { views: { increment: 1 } },
+      });
+    }
 
     return NextResponse.json({ project });
   } catch (error) {
@@ -59,9 +74,28 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
     const body = await request.json();
     const validatedData = updateSchema.parse(body);
+
+    const existing = await prisma.project.findUnique({
+      where: { id },
+      select: { userId: true },
+    });
+    if (!existing) {
+      return NextResponse.json(
+        { error: "Project not found" },
+        { status: 404 }
+      );
+    }
+    if (existing.userId !== session.user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     const project = await prisma.project.update({
       where: { id },
@@ -99,7 +133,26 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
+
+    const existing = await prisma.project.findUnique({
+      where: { id },
+      select: { userId: true },
+    });
+    if (!existing) {
+      return NextResponse.json(
+        { error: "Project not found" },
+        { status: 404 }
+      );
+    }
+    if (existing.userId !== session.user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
     
     await prisma.project.delete({
       where: { id },
