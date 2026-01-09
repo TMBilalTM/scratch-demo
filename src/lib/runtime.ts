@@ -469,6 +469,11 @@ export async function executeCode(
     const distanceTo = runtime.distanceTo;
     const timer = runtime.timer;
     const resetTimer = runtime.resetTimer;
+    
+    // Variables
+    const setVar = runtime.setVar;
+    const getVar = runtime.getVar;
+    const changeVar = runtime.changeVar;
 
     // Execute code
     const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
@@ -496,6 +501,9 @@ export async function executeCode(
       "distanceTo",
       "timer",
       "resetTimer",
+      "setVar",
+      "getVar",
+      "changeVar",
       code
     );
     await fn(
@@ -521,7 +529,10 @@ export async function executeCode(
       touching,
       distanceTo,
       timer,
-      resetTimer
+      resetTimer,
+      setVar,
+      getVar,
+      changeVar
     );
       setSize,
       pointTowards

@@ -126,12 +126,27 @@ scratch/
 - [x] ✅ Proje galerisi
 - [x] ✅ SEO optimizasyonu
 - [x] ✅ Güvenlik headers
-- [ ] 🚧 Kod yorumlayıcı/çalıştırıcı
-- [ ] 🚧 Sprite animasyon motoru
-- [ ] 🚧 Asset yönetim paneli
-- [ ] 🚧 Kullanıcı authentication
+- [x] ✅ Kod yorumlayıcı/çalıştırıcı (Runtime Engine)
+- [x] ✅ Sprite animasyon motoru (Smooth animations)
+- [x] ✅ Asset yönetim paneli (Upload/Delete)
+- [x] ✅ Kullanıcı authentication (NextAuth.js)
+- [x] ✅ Motion blocks (move, turn, go to, glide, set x/y)
+- [x] ✅ Looks blocks (say, show, hide, size)
+- [x] ✅ Control blocks (wait, repeat, forever, if/else)
+- [x] ✅ Sensing blocks (mouse, keyboard, touching, timer)
+- [x] ✅ Variables sistem (set, get, change)
+- [x] ✅ Multi-sprite support
+- [x] ✅ Sprite selector (target specific sprites)
+- [x] ✅ Zoom system
+- [x] ✅ Drag-and-drop positioning
 - [ ] 🚧 Proje paylaşım sistemi
-- [ ] 🚧 Ses efektleri
+- [ ] 🚧 Ses efektleri (Web Audio API)
+- [ ] 🚧 Lists (array operations)
+- [ ] 🚧 Broadcast sistemi (sprite communication)
+- [ ] 🚧 Custom blocks (user-defined functions)
+- [ ] 🚧 Pen/Drawing sistemi
+- [ ] 🚧 Collision detection (sprite-to-sprite)
+- [ ] 🚧 Costume switching
 - [ ] 🚧 Gerçek zamanlı işbirliği
 - [ ] 🚧 Öğretmen/Öğrenci modları
 
