@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -20,12 +20,23 @@ interface ShareDialogProps {
   onOpenChange: (open: boolean) => void;
   projectId: string;
   projectTitle: string;
+  isPublic: boolean;
+  onIsPublicChange: (isPublic: boolean) => void;
 }
 
-export function ShareDialog({ open, onOpenChange, projectId, projectTitle }: ShareDialogProps) {
-  const [isPublic, setIsPublic] = useState(false);
+export function ShareDialog({
+  open,
+  onOpenChange,
+  projectId,
+  projectTitle,
+  isPublic,
+  onIsPublicChange,
+}: ShareDialogProps) {
   const [copied, setCopied] = useState(false);
-  const shareUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/project/${projectId}`;
+  const shareUrl = useMemo(
+    () => `${typeof window !== "undefined" ? window.location.origin : ""}/project/${projectId}`,
+    [projectId]
+  );
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(shareUrl);
@@ -70,7 +81,7 @@ export function ShareDialog({ open, onOpenChange, projectId, projectTitle }: Sha
                   : "Only you can access this project"}
               </p>
             </div>
-            <Switch checked={isPublic} onCheckedChange={setIsPublic} />
+            <Switch checked={isPublic} onCheckedChange={onIsPublicChange} />
           </div>
 
           <Separator />

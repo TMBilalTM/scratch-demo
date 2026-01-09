@@ -48,6 +48,7 @@ export default function EditorWorkspace({ initialProjectId }: EditorWorkspacePro
   const [projectTitle, setProjectTitle] = useState("Untitled Project");
   const [projectDescription, setProjectDescription] = useState("");
   const [projectId, setProjectId] = useState(() => `project-${Date.now()}`);
+  const [isProjectPublic, setIsProjectPublic] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [showAssets, setShowAssets] = useState(false);
   const [showProjects, setShowProjects] = useState(false);
@@ -252,6 +253,7 @@ export default function EditorWorkspace({ initialProjectId }: EditorWorkspacePro
         mode,
         blocksXml,
         code,
+        isPublic: isProjectPublic,
         sprites: JSON.parse(JSON.stringify(sprites)), // Deep copy
         backdrop: backdrop,
         zoom: zoom,
@@ -303,6 +305,7 @@ export default function EditorWorkspace({ initialProjectId }: EditorWorkspacePro
     setMode("blocks");
     setDraftBlocksXml("");
     setDraftCode("");
+    setIsProjectPublic(false);
     
     // Editor'ları temizle
     blockEditorRef.current?.loadWorkspaceXml("");
@@ -334,6 +337,7 @@ export default function EditorWorkspace({ initialProjectId }: EditorWorkspacePro
         setProjectDescription(project.description || "");
         setDraftBlocksXml(project.blocksXml || "");
         setDraftCode(project.code || "");
+        setIsProjectPublic(Boolean(project.isPublic));
         setMode(project.mode || "blocks");
         
         // Load full editor state first
@@ -625,6 +629,14 @@ export default function EditorWorkspace({ initialProjectId }: EditorWorkspacePro
         onOpenChange={setShowShare}
         projectId={projectId}
         projectTitle={projectTitle}
+        isPublic={isProjectPublic}
+        onIsPublicChange={(next) => {
+          setIsProjectPublic(next);
+          // Persist immediately so refresh keeps it even before autosave
+          setTimeout(() => {
+            handleSave();
+          }, 0);
+        }}
       />
       
       <AuthDialog
